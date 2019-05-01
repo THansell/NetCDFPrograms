@@ -5,38 +5,19 @@ using namespace std;
 #include <netcdf.h>
 
 #include "Argv.hpp"
-
-/* Handle errors by printing an error message and exiting with a
- * non-zero status. */
-#define ERRCODE 2
-
-void nc_error(string funname, const char e) {
-	cerr << "Error: function[" << funname << "] returned [" << nc_strerror(e) << "]" << endl;
-	exit(ERRCODE);
-}
+#include "netCDFObjects.hpp"
 
 int retval;
 char temporaryname[NC_MAX_NAME + 1];
 
-class nc_dimension {
-public:
-	int id;
-	string name;
-	size_t size;
-	
-	nc_dimension(int ncid, int dimid) {
-		if (retval = nc_inq_dim(ncid, dimid, (char *)&temporaryname, &this->size)) {
-			nc_error("nc_inq_dimname", retval);
-		}
-		this->id = dimid;
-		this->name = temporaryname;
-	}
-};
-
 class nc_dimensions {
 public:
 	vector<nc_dimension> dims;
-	nc_dimensions() {}
+	nc_dimensions() {} // default constructor to create a new object
+
+	nc_dimensions(int ncid) { // read the dimensions from a netCDF id
+
+	}
 	void add_dimension(nc_dimension d) {
 		this->dims.push_back(d);
 	}
@@ -76,7 +57,7 @@ int main(int argc, char* argv[])
 	}
 
 	for (nc_dimension d: myDims.dims) {
-		cout << "Dimension[" << d.id << "] name is [" << d.name << "]" << " size is [" << d.size << "]" << endl;
+		cout << "Dimension[" << d.getId() << "] name is [" << d.getName() << "]" << " size is [" << d.getSize() << "]" << endl;
 	}
 	
 	char varname[NC_MAX_NAME + 1];
@@ -106,19 +87,30 @@ int main(int argc, char* argv[])
 
 	cout << " val = [" << val << "]" << endl;
 
-//	short data[345][120][121][121];
-	short data[345*120*121*121];
+	vector<short> data;
 
-	cout.flush();
+	cout << " number of elements = [" << 345 * 120 * 121 * 121 << "]" << endl;
+	cout << " sizeOf(data) = [" << sizeof(data) << "]" << endl;
+	cout << " SIZE_T_MAX = [" << SIZE_MAX << "]" << endl;
+	cout << " sizeof(size_t) = [" << sizeof(size_t) << "]" << endl;
 
-
-	if (retval = nc_get_var_short(nc_file_id, 0, data)) {
-		nc_error("nc_get_var", retval);
+	for (int ti = 0; ti < 1; ti++) {
+		for (int zi = 0; zi < 120; zi++) {
+			for (int yi = 0; yi < 121; yi++) {
+				for (int xi = 0; xi < 121; xi++) {
+					size_t dims[4] = { ti, zi, yi, xi };
+					short bob;
+					nc_get_var1(nc_file_id, 0, dims, &bob);
+					data.push_back( bob );
+				}
+			}
+			cout << " z [" << zi << "]" << endl;
+		}
 	}
 
-	cout << " from array x = 0 [" << data[0] << "]" << endl;
-//	cout << " from array x = 0 [" << data[0][0][0][0] << "]" << endl ;
-//	cout << " from array x = 90 [" << data[0][0][0][90] << "]" << endl;
+	cout << "vector size now = [" << data.size() << "]" << endl;
+	cout << " from array x = 0 [" << data[0] << "]" << endl ;
+	cout << " from array x = 90 [" << data[90] << "]" << endl;
 
 	cout << "Closing file [" << nc_file_id << "]" << endl;
 	nc_close(nc_file_id);
