@@ -21,9 +21,15 @@
     <ClCompile Include="Argv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="netCDFObjects.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Argv.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="netCDFObjects.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
