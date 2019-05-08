@@ -26,10 +26,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Argv.hpp">
+    <ClInclude Include="netCDFObjects.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="netCDFObjects.hpp">
+    <ClInclude Include="Argv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

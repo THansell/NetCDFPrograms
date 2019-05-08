@@ -162,8 +162,8 @@
     <ClCompile Include="netCDFObjects.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Argv.hpp" />
-    <ClInclude Include="netCDFObjects.hpp" />
+    <ClInclude Include="Argv.h" />
+    <ClInclude Include="netCDFObjects.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
