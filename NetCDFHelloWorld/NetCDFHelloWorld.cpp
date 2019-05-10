@@ -7,17 +7,21 @@ using namespace std;
 #include "Argv.h"
 #include "netCDFObjects.h"
 
-int retval;
-char temporaryname[NC_MAX_NAME + 1];
-
 int main(int argc, char* argv[])
 {
-	Argv args(argc, argv);
+	cout << "Testing " << endl;
+	// Argv args(argc, argv);
+	cout << "1,";
 
-	string NetCDFFileName = args[1];
+	// string NetCDFFileName = args[1];
 
+	cout << " 2,";
+
+	// cout << NetCDFFileName << std::endl;
 	NetCDFFile cloud;
-	cloud.open(NetCDFFileName);
+	//cloud.open(NetCDFFileName);
 
-	cloud.close();
+	//cloud.DumpTo(cout);
+
+	//cloud.close();
 }

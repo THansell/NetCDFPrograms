@@ -22,13 +22,13 @@ public:
 	int getId();
 	std::string getName();
 	virtual void populateName() = 0;
-	virtual void DumpTo(std::ostream& stream, std::string indent = "") = 0;
+	virtual void DumpTo(std::ostream& stream) = 0;
 };
 
 class nc_attribute : public nc_super {
 protected:
-	int ncid;
-	int varid;
+	int ncid = -1;
+	int varid = -1;
 	nc_type type;
 	size_t size = 0;
 public:
@@ -38,7 +38,7 @@ public:
 	nc_type getType();
 	std::string getValue();
 	void populateName();
-	void DumpTo(std::ostream& stream, std::string indent = "");
+	void DumpTo(std::ostream& stream);
 };
 
 class nc_dimension : public nc_super {
@@ -49,7 +49,7 @@ public:
 	nc_dimension(int ncid, int dimid);
 	size_t getSize();
 	void populateName();
-	void DumpTo(std::ostream& stream, std::string indent = "");
+	void DumpTo(std::ostream& stream);
 };
 
 class nc_variable: public nc_super {
@@ -65,7 +65,7 @@ public:
 	nc_dimension getDimension(int dimid);
 	nc_attribute getAttribute(int attid);
 	void populateName();
-	void DumpTo(std::ostream&, std::string indent = "");
+	void DumpTo(std::ostream&);
 };
 
 class NetCDFFile: public nc_super {
@@ -86,7 +86,7 @@ public:
 	nc_dimension getDimension(int dimid);
 	nc_variable getVariable(int varid);
 	nc_attribute getAttribute(int attid);
-	void DumpTo(std::ostream& stream,std::string indent = "");
+	void DumpTo(std::ostream& stream);
 };
 
 #endif // NET_CDF_OBJECTS_HPP

@@ -33,7 +33,7 @@ void nc_error(std::string funname, const char e) {
 }
 
 int nc_super::getId() {
-	return this->id;
+	return this->id = -1;
 }
 
 std::string nc_super::getName() {
@@ -86,8 +86,8 @@ void nc_attribute::populateName() {
 	this->name = nc_local::temp_name;
 }
 
-void nc_attribute::DumpTo(std::ostream& stream, std::string indent) {
-	stream << indent << ((this->varid == NC_GLOBAL)?"Global ": "" ) << "Attribute["
+void nc_attribute::DumpTo(std::ostream& stream) {
+	stream << ((this->varid == NC_GLOBAL)?"Global ": "" ) << "Attribute["
 		<< this->getId() << "] : " 
 		<< this->getName() << " = \"" << this->getValue() << "\""
 		<< std::endl;
@@ -112,8 +112,8 @@ void nc_dimension::populateName() {
 	this->name = "BogusDimension";
 }
 
-void nc_dimension::DumpTo(std::ostream& stream, std::string indent) {
-	stream << indent << "Dimension[" << this->id << "] : "
+void nc_dimension::DumpTo(std::ostream& stream) {
+	stream << "Dimension[" << this->id << "] : "
 		   << this->name << ":size = [" << this->size << "]" << std::endl;
 }
 nc_variable::nc_variable(int ncid, int varid) {
@@ -144,8 +144,8 @@ void nc_variable::populateName() {
 	this->name = "BogusVariable";
 }
 
-void nc_variable::DumpTo(std::ostream& stream, std::string indent) {
-	stream << indent << "Variable [" << this->id << "] : " << this->name << "(";
+void nc_variable::DumpTo(std::ostream& stream) {
+	stream << "Variable [" << this->id << "] : " << this->name << "(";
 	std::string sep = "";
 	for (int i = 0; i < this->number_of_dimensions; i++) {
 		nc_dimension dim = this->getDimension(this->dimids[i]);
@@ -155,9 +155,9 @@ void nc_variable::DumpTo(std::ostream& stream, std::string indent) {
 	stream << ")" << std::endl;
 	for (int i = 0; i < this->number_of_attributes; i++) {
 		nc_attribute att = this->getAttribute(i);
-		att.DumpTo(stream, "  ");
+		att.DumpTo(stream);
 	}
-	stream << indent << "}" << std::endl;
+	stream << "}" << std::endl;
 }
 
 NetCDFFile::NetCDFFile() {
@@ -230,17 +230,24 @@ nc_attribute NetCDFFile::getAttribute(int attid) {
 	return att;
 }
 
-void NetCDFFile::DumpTo(std::ostream& stream, std::string indent) {
+void NetCDFFile::DumpTo(std::ostream& stream) {
 	stream << "NetCDF Path = [" << this->getName() << "]" << std::endl
 		<< "     has [" << this->getNumberOfAttributes() << "] attributes" << std::endl
 		<< "         [" << this->getNumberOfDimensions() << "] dimensions" << std::endl
 		<< "     and [" << this->getNumberOfVariables() << "] variables" << std::endl;
 	for (int i = 0; i < this->getNumberOfAttributes(); i++) {
 		nc_attribute att(this->getId(), NC_GLOBAL, i);
-		att.DumpTo(stream, "  ");
+		att.DumpTo(stream);
 	}
 
-	for (int i = 0; i < this>getNumberOfDimensions(); i++) {
-		nc_dimension dim;
+	for (int i = 0; i < this->getNumberOfDimensions(); i++) {
+		nc_dimension dim(this->getId(),i);
+		dim.DumpTo(stream);
 	}
-} 
+
+	for (int i = 0; i < this->getNumberOfVariables(); i++) {
+		nc_variable var(this->getId(), i);
+		var.DumpTo(stream);
+	}
+}
+ 
