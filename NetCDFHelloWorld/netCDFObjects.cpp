@@ -1,6 +1,7 @@
 #include <iostream>
 #include <netcdf.h>
 #include "netCDFObjects.h"
+#include "Argv.h"
 
 /* Handle errors by printing an error message and exiting with a
  * non-zero status. */
@@ -58,7 +59,9 @@ nc_attribute::nc_attribute(int ncid, int varid, int id) {
 
 size_t nc_attribute::getSize() {
 	if (!this->size) {
-		if (int retval = nc_inq_attlen(this->ncid, this->varid, this->getName().c_str(), &this->size)) {
+		if (this->ncid == -1) {
+			this->size = this->value.size();
+		} else if (int retval = nc_inq_attlen(this->ncid, this->varid, this->getName().c_str(), &this->size)) {
 			nc_error("nc_attribute::getSize calling nc_inq_attlen", retval);
 		}
 	}
@@ -66,22 +69,33 @@ size_t nc_attribute::getSize() {
 }
 
 nc_type nc_attribute::getType() {
-	nc_type type;
-	if (int retval = nc_inq_atttype(this->ncid, this->varid, this->getName().c_str(), &type)) {
-		nc_error("nc_attribute::getSize calling nc_inq_atttype", retval);
+	if (this->ncid != -1) {
+		if (int retval = nc_inq_atttype(this->ncid, this->varid, this->getName().c_str(), &this->type)) {
+			nc_error("nc_attribute::getSize calling nc_inq_atttype", retval);
+		}
 	}
-	return type;
+	return this->type;
+}
+
+void nc_attribute::setType(nc_type type) {
+	this->type = type;
 }
 
 std::string nc_attribute::getValue() {
-	char* stuff = new char[this->getSize() + 1];
-	if (int retval = nc_get_att(this->ncid, this->varid, this->getName().c_str(), (void*)stuff)) {
-		nc_error("nc_attribute::getValue calling nc_get_att", retval);
+	if (this->value.empty()) {
+		char* stuff = new char[this->getSize() + 1];
+		if (int retval = nc_get_att(this->ncid, this->varid, this->getName().c_str(), (void*)stuff)) {
+			nc_error("nc_attribute::getValue calling nc_get_att", retval);
+		}
+		stuff[this->getSize()] = '\0';
+		this->value = stuff;
+		delete[] stuff;
 	}
-	stuff[this->getSize()] = '\0';
-	std::string val = stuff;
-	delete[] stuff;
-	return val;
+	return this->value;
+}
+
+void nc_attribute::setValue(std::string val) {
+	this->value = val;
 }
 
 void nc_attribute::populateName() {
@@ -122,18 +136,48 @@ void nc_dimension::DumpTo(std::ostream& stream, std::string indent) {
 		   << this->name << ":size = [" << this->size << "]" << std::endl;
 }
 
+nc_variable::nc_variable() {
+}
+
 nc_variable::nc_variable(int ncid, int varid) {
-	if (int retval = nc_inq_var(ncid, varid, nc_local::temp_name, &this->type, &this->number_of_dimensions, nc_local::temp_int, &this->number_of_attributes)) {
+	int ndims;
+	if (int retval = nc_inq_var(ncid, varid, nc_local::temp_name, &this->type, &ndims, nc_local::temp_int, &this->number_of_attributes)) {
 		nc_error("nc_variable constructor calling nc_inq_var", retval);
 	}
 
 	this->ncid = ncid;
 	this->id = varid;
 	this->name = nc_local::temp_name;
-
-	for (int i = 0; i < this->number_of_dimensions; i++) {
+	for (int i = 0; i < ndims; i++) {
 		this->dimids.push_back(nc_local::temp_int[i]);
 	}
+}
+
+int nc_variable::getNumberOfAttributes() {
+	return this->number_of_attributes;
+}
+
+int nc_variable::getNumberOfDimensions() {
+	return (int) this->dimids.size();
+}
+
+int nc_variable::getDimId(int i) {
+	if (i < this->dimids.size()) {
+		return this->dimids[i];
+	}
+	return -1;
+}
+
+short nc_variable::getShortValueAt(size_t* dims) {
+	short answer;
+	if (int retval = nc_get_var1(this->ncid, this->id, dims, &answer)) {
+		nc_error(this->getName() + ".getShortValue failed", retval);
+	}
+	return answer;
+}
+
+nc_type nc_variable::getType() {
+	return this->type;
 }
 
 nc_dimension nc_variable::getDimension(int dimid) {
@@ -153,7 +197,7 @@ void nc_variable::populateName() {
 void nc_variable::DumpTo(std::ostream& stream, std::string indent) {
 	stream << indent << "Variable [" << this->id << "] : " << this->name << "(";
 	std::string sep = "";
-	for (int i = 0; i < this->number_of_dimensions; i++) {
+	for (int i = 0; i < this->getNumberOfDimensions(); i++) {
 		nc_dimension dim = this->getDimension(this->dimids[i]);
 		stream << sep << dim.getName();
 		sep = ", ";
@@ -179,9 +223,9 @@ void NetCDFFile::open(std::string file) {
 }
 
 void NetCDFFile::create(std::string file) {
-	if (int retval = nc_create(file.c_str(), NC_NOCLOBBER, &this->id)) {
+	if (int retval = nc_create(file.c_str(), NC_NOCLOBBER | NC_NETCDF4, &this->id)) {
 		if (retval == NC_EEXIST) {
-			std::cerr << "Error: File [" << file << "] exists. Can't create." << std::endl;
+			std::cerr << "Error: File [" << BaseName(file) << "] exists. Can't create." << std::endl;
 			exit(ERRCODE);
 		}
 	}
@@ -233,14 +277,70 @@ nc_dimension NetCDFFile::getDimension(int dimid) {
 	return dim;
 }
 
+void NetCDFFile::addDimension(nc_dimension dim) {
+	int dimid;
+	if (int retval = nc_def_dim(this->getId(), dim.getName().c_str(), dim.getSize(), &dimid)) {
+		nc_error("NetCDFFile [" + BaseName(this->getName()) + "] can't add dimension", retval);
+	}
+}
+
 nc_variable NetCDFFile::getVariable(int varid) {
 	nc_variable var(this->getId(), varid);
 	return var;
 }
 
+nc_variable NetCDFFile::getVariableNamed(std::string str) {
+	nc_variable var;
+	for (int i = 0; i < this->getNumberOfVariables(); i++) {
+		var = this->getVariable(i);
+		if (str.compare(var.getName()) == 0) {
+			break;
+		}
+	}
+	return var;
+}
+
+void NetCDFFile::addVariable(nc_variable var) {
+	size_t dimsize = var.getNumberOfDimensions();
+	int* dims = new int[dimsize];
+	for (size_t i = 0; i < dimsize; i++) {
+		dims[i] = var.getDimId((int)i);
+	}
+	int varid;
+	if (int retval = nc_def_var(this->getId(), var.getName().c_str(), var.getType(), var.getNumberOfDimensions(), dims, &varid)) {
+		nc_error("NetCDFFile [" + BaseName(this->getName()) + "] can't create variable [" + var.getName() + "]", retval);
+	}
+	short fill = -1;
+	for (int i = 0; i < var.getNumberOfAttributes(); i++) {
+		nc_attribute att = var.getAttribute(i);
+		if (int retval = nc_put_att(this->getId(), varid, att.getName().c_str(), att.getType(), att.getSize(), att.getValue().c_str())) {
+			nc_error("NetCDFFile [" + BaseName(this->getName()) + "] can't add attribute to variable", retval);
+		}
+	}
+	delete[] dims;
+}
+
 nc_attribute NetCDFFile::getAttribute(int attid) {
 	nc_attribute att(this->getId(), NC_GLOBAL, attid);
 	return att;
+}
+
+void NetCDFFile::addAttribute(nc_attribute att) {
+	if (int retval = nc_put_att(this->getId(), NC_GLOBAL, att.getName().c_str(), att.getType(), att.getSize(), (void*)att.getValue().c_str())) {
+		nc_error("NetCDFFile [" + BaseName(this->getName()) + "] can't add attribute", retval);
+	}
+}
+
+void NetCDFFile::copyAttribute(int attid, int outfileid) {
+	if (int retval = nc_copy_att(this->getId(), NC_GLOBAL, this->getAttribute(attid).getName().c_str(), outfileid, NC_GLOBAL)) {
+		nc_error("NetCDFFile copyAttribute calling nc_copy_att", retval);
+	}
+}
+
+void NetCDFFile::copyAttributes(int outfileid) {
+	for (int i = 0; i < this->getNumberOfAttributes(); i++) {
+		this->copyAttribute(i, outfileid);
+	}
 }
 
 void NetCDFFile::DumpTo(std::ostream& stream, std::string indent) {

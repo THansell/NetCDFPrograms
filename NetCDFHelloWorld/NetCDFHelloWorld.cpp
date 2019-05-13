@@ -16,23 +16,41 @@ void usage(std::string prog_name) {
 int main(int argc, char* argv[])
 {
 	Argv args(argc, argv);
+	NetCDFFile existing;
+	NetCDFFile created;
 
-	CommandLineFlags clflags;
-	clflags.addFlag("dump", { "--dump", "-d" });
-	clflags.addFlag("create", { "--create", "-c" });
-	clflags.process(args);
+	existing.open(argv[1]);
+	
+	nc_variable timeslice = existing.getVariableNamed("time");
+	size_t dims[1];
+	dims[0] = 0;
+	short value = timeslice.getShortValueAt(dims);
+	cout << "[" << value << "]" << endl;
+	exit(0);
 
-	NetCDFFile cloud;
+	created.create(argv[2]);
 
-	if (clflags.testFlag("dump")) {
-		cloud.open(args[1]);
-		cloud.DumpTo(cout);
-		cloud.close();
-	} else if (clflags.testFlag("create")) {
-		cloud.create(args[1]);
-		cloud.close();
+	nc_attribute time;
+	time.setName("timestamp");
+	time.setType(NC_CHAR);
+	time.setValue("BOGUS TIMESTAMP");
+	created.addAttribute(time);
+
+	existing.copyAttributes(created.getId());
+
+	for (int i = 0; i < existing.getNumberOfDimensions(); i++) {
+		nc_dimension copy = existing.getDimension(i);
+		created.addDimension(copy);
 	}
-	else {
-		usage(BaseName(args[0]));
+
+	for (int i = 0; i < existing.getNumberOfVariables(); i++) {
+	nc_variable copy = existing.getVariable(i);
+		created.addVariable(copy);
 	}
+
+	existing.close();
+	created.close();
+	created.open(args[2]);
+	created.DumpTo(cout);
+	created.close();
 }

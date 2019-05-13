@@ -32,12 +32,15 @@ protected:
 	int varid = -1;
 	nc_type type = 0;
 	size_t size = 0;
+	std::string value;
 public:
 	nc_attribute();
 	nc_attribute(int ncid, int varid, int id);
 	size_t getSize();
 	nc_type getType();
+	void setType(nc_type type);
 	std::string getValue();
+	void setValue(std::string val);
 	void populateName();
 	void DumpTo(std::ostream& stream, std::string indent="");
 };
@@ -56,13 +59,17 @@ public:
 class nc_variable: public nc_super {
 private:
 	int ncid;
-	size_t size;
 	nc_type type = 0;
 	int number_of_attributes;
-	int number_of_dimensions;
 	std::vector<int> dimids;
 public:
+	nc_variable();
 	nc_variable(int ncid, int varid);
+	int getNumberOfAttributes();
+	int getNumberOfDimensions();
+	int getDimId(int i);
+	short getShortValueAt(size_t* dims);
+	nc_type getType();
 	nc_dimension getDimension(int dimid);
 	nc_attribute getAttribute(int attid);
 	void populateName();
@@ -86,8 +93,14 @@ public:
 	int getNumberOfAttributes();
 	void populateName();
 	nc_dimension getDimension(int dimid);
+	void addDimension(nc_dimension dim);
 	nc_variable getVariable(int varid);
+	nc_variable getVariableNamed(std::string);
+	void addVariable(nc_variable var);
 	nc_attribute getAttribute(int attid);
+	void addAttribute(nc_attribute att);
+	void copyAttribute(int attid, int outfileid);
+	void copyAttributes(int outfileid);
 	void DumpTo(std::ostream& stream, std::string indent="");
 };
 
