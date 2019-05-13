@@ -7,21 +7,32 @@ using namespace std;
 #include "Argv.h"
 #include "netCDFObjects.h"
 
+void usage(std::string prog_name) {
+	cout << "Usage: " << prog_name << " (--dump|--create) <file>" << endl;
+	cout << "     -d, --dump        dump the NetCDF file <file> to standard output" << endl;
+	cout << "     -c. --create      create a NetCDF file <file> (If a file of that name exists nothing will happen)" << endl;
+}
+
 int main(int argc, char* argv[])
 {
-	cout << "Testing " << endl;
-	// Argv args(argc, argv);
-	cout << "1,";
+	Argv args(argc, argv);
 
-	// string NetCDFFileName = args[1];
+	CommandLineFlags clflags;
+	clflags.addFlag("dump", { "--dump", "-d" });
+	clflags.addFlag("create", { "--create", "-c" });
+	clflags.process(args);
 
-	cout << " 2,";
-
-	// cout << NetCDFFileName << std::endl;
 	NetCDFFile cloud;
-	//cloud.open(NetCDFFileName);
 
-	//cloud.DumpTo(cout);
-
-	//cloud.close();
+	if (clflags.testFlag("dump")) {
+		cloud.open(args[1]);
+		cloud.DumpTo(cout);
+		cloud.close();
+	} else if (clflags.testFlag("create")) {
+		cloud.create(args[1]);
+		cloud.close();
+	}
+	else {
+		usage(BaseName(args[0]));
+	}
 }

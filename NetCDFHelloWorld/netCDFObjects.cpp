@@ -33,7 +33,7 @@ void nc_error(std::string funname, const char e) {
 }
 
 int nc_super::getId() {
-	return this->id = -1;
+	return this->id;
 }
 
 std::string nc_super::getName() {
@@ -41,6 +41,10 @@ std::string nc_super::getName() {
 		this->populateName();
 	}
 	return this->name;
+}
+
+void nc_super::setName(std::string name) {
+	this->name = name;
 }
 
 nc_attribute::nc_attribute() {
@@ -70,12 +74,13 @@ nc_type nc_attribute::getType() {
 }
 
 std::string nc_attribute::getValue() {
-	char* stuff = (char*)calloc(this->getSize()+1, sizeof(char));
-	if (int retval = nc_get_att(this->ncid, this->varid, this->getName().c_str(), (void *)stuff)) {
+	char* stuff = new char[this->getSize() + 1];
+	if (int retval = nc_get_att(this->ncid, this->varid, this->getName().c_str(), (void*)stuff)) {
 		nc_error("nc_attribute::getValue calling nc_get_att", retval);
 	}
 	stuff[this->getSize()] = '\0';
 	std::string val = stuff;
+	delete[] stuff;
 	return val;
 }
 
@@ -86,8 +91,8 @@ void nc_attribute::populateName() {
 	this->name = nc_local::temp_name;
 }
 
-void nc_attribute::DumpTo(std::ostream& stream) {
-	stream << ((this->varid == NC_GLOBAL)?"Global ": "" ) << "Attribute["
+void nc_attribute::DumpTo(std::ostream& stream, std::string indent) {
+	stream << indent << ((this->varid == NC_GLOBAL)?"Global ": "" ) << "Attribute["
 		<< this->getId() << "] : " 
 		<< this->getName() << " = \"" << this->getValue() << "\""
 		<< std::endl;
@@ -112,10 +117,11 @@ void nc_dimension::populateName() {
 	this->name = "BogusDimension";
 }
 
-void nc_dimension::DumpTo(std::ostream& stream) {
-	stream << "Dimension[" << this->id << "] : "
+void nc_dimension::DumpTo(std::ostream& stream, std::string indent) {
+	stream << indent << "Dimension[" << this->id << "] : "
 		   << this->name << ":size = [" << this->size << "]" << std::endl;
 }
+
 nc_variable::nc_variable(int ncid, int varid) {
 	if (int retval = nc_inq_var(ncid, varid, nc_local::temp_name, &this->type, &this->number_of_dimensions, nc_local::temp_int, &this->number_of_attributes)) {
 		nc_error("nc_variable constructor calling nc_inq_var", retval);
@@ -144,8 +150,8 @@ void nc_variable::populateName() {
 	this->name = "BogusVariable";
 }
 
-void nc_variable::DumpTo(std::ostream& stream) {
-	stream << "Variable [" << this->id << "] : " << this->name << "(";
+void nc_variable::DumpTo(std::ostream& stream, std::string indent) {
+	stream << indent << "Variable [" << this->id << "] : " << this->name << "(";
 	std::string sep = "";
 	for (int i = 0; i < this->number_of_dimensions; i++) {
 		nc_dimension dim = this->getDimension(this->dimids[i]);
@@ -155,9 +161,8 @@ void nc_variable::DumpTo(std::ostream& stream) {
 	stream << ")" << std::endl;
 	for (int i = 0; i < this->number_of_attributes; i++) {
 		nc_attribute att = this->getAttribute(i);
-		att.DumpTo(stream);
+		att.DumpTo(stream, indent + "  ");
 	}
-	stream << "}" << std::endl;
 }
 
 NetCDFFile::NetCDFFile() {
@@ -168,10 +173,18 @@ bool NetCDFFile::isOpen() {
 }
 
 void NetCDFFile::open(std::string file) {
-	// Open the file
 	if (int retval = nc_open(file.c_str(), NC_NOWRITE, &this->id)) {
 		nc_error("NetCDFFile::open calling nc_open", retval);
 	}	
+}
+
+void NetCDFFile::create(std::string file) {
+	if (int retval = nc_create(file.c_str(), NC_NOCLOBBER, &this->id)) {
+		if (retval == NC_EEXIST) {
+			std::cerr << "Error: File [" << file << "] exists. Can't create." << std::endl;
+			exit(ERRCODE);
+		}
+	}
 }
 
 void NetCDFFile::close() {
@@ -230,24 +243,34 @@ nc_attribute NetCDFFile::getAttribute(int attid) {
 	return att;
 }
 
-void NetCDFFile::DumpTo(std::ostream& stream) {
-	stream << "NetCDF Path = [" << this->getName() << "]" << std::endl
-		<< "     has [" << this->getNumberOfAttributes() << "] attributes" << std::endl
-		<< "         [" << this->getNumberOfDimensions() << "] dimensions" << std::endl
-		<< "     and [" << this->getNumberOfVariables() << "] variables" << std::endl;
+void NetCDFFile::DumpTo(std::ostream& stream, std::string indent) {
+	stream << indent << "NetCDF Path = [" << this->getName() << "]" << std::endl
+		<< indent << "     has [" << this->getNumberOfAttributes() << "] attributes" << std::endl
+		<< indent << "         [" << this->getNumberOfDimensions() << "] dimensions" << std::endl
+		<< indent << "     and [" << this->getNumberOfVariables() << "] variables" << std::endl;
+
+	stream << "  ----" << std::endl;
+
 	for (int i = 0; i < this->getNumberOfAttributes(); i++) {
 		nc_attribute att(this->getId(), NC_GLOBAL, i);
-		att.DumpTo(stream);
+		att.DumpTo(stream, indent + "  ");
 	}
+
+	stream << "  ----" << std::endl;
 
 	for (int i = 0; i < this->getNumberOfDimensions(); i++) {
 		nc_dimension dim(this->getId(),i);
-		dim.DumpTo(stream);
+		dim.DumpTo(stream, indent + "  ");
 	}
+
+	stream << "  ----" << std::endl;
 
 	for (int i = 0; i < this->getNumberOfVariables(); i++) {
 		nc_variable var(this->getId(), i);
-		var.DumpTo(stream);
+		var.DumpTo(stream, indent + "  ");
 	}
+
+	stream << "  ----" << std::endl;
+
 }
  

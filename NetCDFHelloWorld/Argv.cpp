@@ -1,4 +1,5 @@
 #include "Argv.h"
+#include <algorithm>
 
 Argv::Argv() {
 }
@@ -58,4 +59,49 @@ void Argv::push_back(std::string str) {
 void Argv::push_back(char * cstr) {
 	std::string str(cstr);
 	this->command_line.push_back(str);
+}
+
+void CommandLineFlags::addFlag(std::string name, std::vector<std::string> options) {
+	this->flagDefinitions[name] = options;
+}
+
+std::string CommandLineFlags::matchesFlag(std::string arg) {
+	for (auto const& i : this->flagDefinitions) {
+		for (auto const& j : i.second) {
+			if (arg.compare(j) == 0) {
+				return i.first;
+			}
+		}
+	}
+	return "";
+}
+
+bool CommandLineFlags::testFlag(std::string f) {
+	for (auto const& x : this->flags) {
+		if (x.compare(f) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void CommandLineFlags::setFlag(std::string f) {
+	if (!this->testFlag(f)) {
+		this->flags.push_back(f);
+	}
+}
+
+void CommandLineFlags::process(Argv& args) {
+	for (int i = 0; i < args.size(); i++ ) {
+		std::string flag = matchesFlag(args[i]);
+		if (!flag.empty()) {
+			this->setFlag(flag);
+			args.erase(i);
+		}
+	}
+}
+
+std::string BaseName(std::string fn) {
+	size_t f = fn.find_last_of("\\");
+	return fn.substr(f + 1);
 }
