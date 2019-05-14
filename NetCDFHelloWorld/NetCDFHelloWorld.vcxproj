@@ -158,12 +158,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Argv.cpp" />
+    <ClCompile Include="nc_attribute.cpp" />
+    <ClCompile Include="nc_dimension.cpp" />
+    <ClCompile Include="nc_super.cpp" />
+    <ClCompile Include="nc_variable.cpp" />
     <ClCompile Include="NetCDFHelloWorld.cpp" />
-    <ClCompile Include="netCDFObjects.cpp" />
+    <ClCompile Include="NetCDFFile.cpp" />
+    <ClCompile Include="nc_local.cpp" />
+    <ClCompile Include="filename_functions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Argv.h" />
-    <ClInclude Include="netCDFObjects.h" />
+    <ClInclude Include="filename_functions.h" />
+    <ClInclude Include="nc_attribute.h" />
+    <ClInclude Include="nc_dimension.h" />
+    <ClInclude Include="nc_super.h" />
+    <ClInclude Include="nc_variable.h" />
+    <ClInclude Include="NetCDFFile.h" />
+    <ClInclude Include="nc_local.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

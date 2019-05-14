@@ -100,8 +100,3 @@ void CommandLineFlags::process(Argv& args) {
 		}
 	}
 }
-
-std::string BaseName(std::string fn) {
-	size_t f = fn.find_last_of("\\");
-	return fn.substr(f + 1);
-}

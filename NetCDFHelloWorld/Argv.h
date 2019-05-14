@@ -37,6 +37,4 @@ public:
 	void process(Argv& args);
 };
 
-std::string BaseName(std::string fname);
-
 #endif // ARGV_HPP
